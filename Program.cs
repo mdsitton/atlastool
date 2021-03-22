@@ -145,7 +145,7 @@ namespace atlastool
                 foreach (var texture in atlasTextures)
                 {
                     var bitmap = texture.ConvertToBitmap(false);
-                    bitmap.Save(Path.Combine(outputpath, $"{texture.m_Name}.png"), ImageFormat.Png);
+                    bitmap.Save(Path.Combine(gameversionOutputPath, $"{texture.m_Name}.png"), ImageFormat.Png);
                     Console.WriteLine($"Atlas texture2d {texture.m_Name} saved");
                     json.WriteStringValue($"{texture.m_Name}.png");
                 }
