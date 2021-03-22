@@ -114,7 +114,7 @@ namespace atlastool
                                     continue;
 
                                 var image = SpriteHelper.GetImage(spr);
-                                string filename = $"{spr.m_Name}.png";
+                                string filename = $"{spr.m_Name}_{spr.m_PathID}.png";
                                 string filePath = Path.Combine(spriteOutputDir, filename);
 
                                 image.Save(filePath, ImageFormat.Png);
@@ -128,6 +128,7 @@ namespace atlastool
 
                                 json.WriteStartObject();
                                 json.WriteString("fileName", filename);
+                                json.WriteString("name", spr.m_Name);
                                 json.WriteString("hash", hashString);
                                 json.WriteEndObject();
 
@@ -172,6 +173,7 @@ namespace atlastool
             {
                 json.ReadObjectStart(skipRead: true);
                 string filename = json.ReadString("fileName");
+                string name = json.ReadString("name");
                 string hash = json.ReadString("hash");
                 json.ReadObjectEnd();
                 imageData.Add((filename, hash));
