@@ -20,12 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FastEnum" Version="1.6.0" />
     <PackageReference Include="System.Drawing.Common" Version="5.0.2" />
+    <PackageReference Include="System.Text.Json" Version="5.0.1" />
   </ItemGroup>
-  <!--<ItemGroup Condition="$(IsWindows) == 'True'">
-    <Content CopyToOutputDirectory="PreserveNewest" Include=".\deps\x86\Texture2DDecoderNative.dll" Link="x86\Texture2DDecoderNative.dll" />
-    <Content CopyToOutputDirectory="PreserveNewest" Include=".\deps\x64\Texture2DDecoderNative.dll" Link="x64\Texture2DDecoderNative.dll" />
-  </ItemGroup>-->
   <ItemGroup>
     <None Update="$(SolutionDir)deps\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
