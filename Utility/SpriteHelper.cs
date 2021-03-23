@@ -129,7 +129,7 @@ namespace AssetStudio
             return null;
         }
 
-        private static Vector2[][] GetTriangles(SpriteRenderData m_RD)
+        public static Vector2[][] GetTriangles(SpriteRenderData m_RD)
         {
             if (m_RD.vertices != null) //5.6 down
             {

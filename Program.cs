@@ -19,25 +19,30 @@ namespace atlastool
             return bitmap;
         }
 
-        public static void ExportAtlas(string inputPath, string outputpath)
+        public static AssetsManager LoadAssetManager(string path)
         {
-            Console.WriteLine($"Loading asset file {inputPath}");
             AssetsManager assetManager = new AssetsManager();
-            Console.WriteLine(inputPath);
 
-            if (File.Exists(inputPath))
+            if (File.Exists(path))
             {
-                assetManager.LoadFiles(new string[] { inputPath });
+                assetManager.LoadFiles(new string[] { path });
             }
-            else if (Directory.Exists(inputPath))
+            else if (Directory.Exists(path))
             {
-                assetManager.LoadFolder(inputPath);
+                assetManager.LoadFolder(path);
             }
             else
             {
                 Console.WriteLine("Error loading file");
-                return;
+                return null;
             }
+            return assetManager;
+        }
+
+        public static void ExportAtlas(string inputPath, string outputpath)
+        {
+            Console.WriteLine($"Loading asset file {inputPath}");
+            AssetsManager assetManager = LoadAssetManager(inputPath);
 
             List<Texture2D> atlasTextures = new List<Texture2D>();
             string gameVersion = string.Empty;
@@ -170,6 +175,7 @@ namespace atlastool
             string assetDataPath = json.ReadString("unityAssetPath");
             List<(string fileName, string name, string hash)> imageData = new List<(string fileName, string name, string hash)>();
             List<string> atlasTextures = new List<string>();
+            List<string> changedFiles = new List<string>();
 
             json.ReadArrayStart("imageData");
 
@@ -199,10 +205,17 @@ namespace atlastool
                 string hashString = Convert.ToBase64String(hashData);
                 if (hashString != fileHash)
                 {
+                    changedFiles.Add(fileName);
                     Console.WriteLine($"Changed file detected! {fileName}");
                 }
             }
-                Console.WriteLine($"Finished loading data {atlasTextures[0]}");
+
+            if (changedFiles.Count == 0 )
+            {
+                Console.WriteLine("No changed files found");
+            }
+
+            Console.WriteLine($"Finished loading data {atlasTextures[0]}");
         }
 
         static void Main(string[] args)
