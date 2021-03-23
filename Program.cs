@@ -134,6 +134,7 @@ namespace atlastool
                                 json.WriteString("fileName", filename);
                                 json.WriteString("name", spr.m_Name);
                                 json.WriteString("hash", hashString);
+                                json.WriteNumber("pathID", (int)spr.m_PathID);
                                 json.WriteEndObject();
 
                                 Console.WriteLine($"fiveFretAtlas Sprite {spr.m_Name} saved");
@@ -150,9 +151,11 @@ namespace atlastool
                 foreach (var texture in atlasTextures)
                 {
                     var bitmap = texture.ConvertToBitmap(false);
+
+                    bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     bitmap.Save(Path.Combine(gameversionOutputPath, $"{texture.m_Name}.png"), ImageFormat.Png);
                     Console.WriteLine($"Atlas texture2d {texture.m_Name} saved");
-                    json.WriteStringValue($"{texture.m_Name}.png");
+                    json.WriteStringValue(texture.m_Name);
                 }
                 json.WriteEndArray();
 
@@ -173,9 +176,10 @@ namespace atlastool
             string spriteDir = Path.Combine(inputPath, $"sprites");
 
             string assetDataPath = json.ReadString("unityAssetPath");
-            List<(string fileName, string name, string hash)> imageData = new List<(string fileName, string name, string hash)>();
+
+            AssetsManager assetManager = LoadAssetManager(assetDataPath);
+            List<(string fileName, string name, string hash, int pathID)> imageData = new List<(string fileName, string name, string hash, int pathID)>();
             List<string> atlasTextures = new List<string>();
-            List<string> changedFiles = new List<string>();
 
             json.ReadArrayStart("imageData");
 
@@ -185,12 +189,13 @@ namespace atlastool
                 string filename = json.ReadString("fileName");
                 string name = json.ReadString("name");
                 string hash = json.ReadString("hash");
+                int pathID = json.ReadInt32("pathID");
                 json.ReadObjectEnd();
-                imageData.Add((filename, name, hash));
+                imageData.Add((filename, name, hash, pathID));
             }
             json.ReadStringArray("spriteAtlas", atlasTextures);
 
-            foreach ((string fileName, string originalName, string fileHash) in imageData)
+            foreach ((string fileName, string originalName, string fileHash, int pathID) in imageData)
             {
 
                 string filePath = Path.Combine(spriteDir, fileName);
@@ -205,17 +210,30 @@ namespace atlastool
                 string hashString = Convert.ToBase64String(hashData);
                 if (hashString != fileHash)
                 {
-                    changedFiles.Add(fileName);
-                    Console.WriteLine($"Changed file detected! {fileName}");
+                    using (var replaceImage = new Bitmap(filePath))
+                    {
+                        foreach (var assetFile in assetManager.assetsFileList)
+                        {
+                            foreach (var obj in assetFile.Objects)
+                            {
+                                if (obj is Sprite spr && spr.m_Name == originalName && spr.m_PathID == pathID)
+                                {
+                                    var textureName = BitmapUpdate.GetTextureName(spr);
+                                    using (var atlas = new Bitmap(Path.Combine(inputPath, $"{textureName}.png")))
+                                    {
+                                        atlas.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                                        BitmapUpdate.OverwriteSprite(atlas, replaceImage, spr);
+                                        atlas.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                                        atlas.Save(Path.Combine(inputPath, $"{textureName}-changed.png"), ImageFormat.Png);
+                                    }
+                                }
+                            }
+                        }
+                        Console.WriteLine($"Changed file detected! {fileName}");
+                    }
                 }
             }
 
-            if (changedFiles.Count == 0 )
-            {
-                Console.WriteLine("No changed files found");
-            }
-
-            Console.WriteLine($"Finished loading data {atlasTextures[0]}");
         }
 
         static void Main(string[] args)
