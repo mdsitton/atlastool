@@ -11,6 +11,7 @@ namespace atlastool
 {
     class Program
     {
+        static SHA1 hash = SHA1.Create();
         public static Bitmap CreateBitmapFromTexture2D(Texture2D texture)
         {
             var bitmap = new Bitmap(texture.m_Width, texture.m_Height, PixelFormat.Format32bppArgb);
@@ -40,8 +41,6 @@ namespace atlastool
 
             List<Texture2D> atlasTextures = new List<Texture2D>();
             string gameVersion = string.Empty;
-
-            SHA1 hash = SHA1.Create();
 
 
             // find game version first
@@ -163,8 +162,13 @@ namespace atlastool
 
             Utf8JsonReader json = new Utf8JsonReader(jsonText);
             json.ReadObjectStart();
+            string gameVersion = json.ReadString("gameVersion");
+            Console.WriteLine($"Found data folder for game version: {gameVersion}");
+
+            string spriteDir = Path.Combine(inputPath, $"sprites");
+
             string assetDataPath = json.ReadString("unityAssetPath");
-            List<(string fileName, string hash)> imageData = new List<(string fileName, string hash)>();
+            List<(string fileName, string name, string hash)> imageData = new List<(string fileName, string name, string hash)>();
             List<string> atlasTextures = new List<string>();
 
             json.ReadArrayStart("imageData");
@@ -176,10 +180,29 @@ namespace atlastool
                 string name = json.ReadString("name");
                 string hash = json.ReadString("hash");
                 json.ReadObjectEnd();
-                imageData.Add((filename, hash));
+                imageData.Add((filename, name, hash));
             }
             json.ReadStringArray("spriteAtlas", atlasTextures);
-            Console.WriteLine($"Finished loading data {atlasTextures[0]}");
+
+            foreach ((string fileName, string originalName, string fileHash) in imageData)
+            {
+
+                string filePath = Path.Combine(spriteDir, fileName);
+
+                //image.Save(filePath, ImageFormat.Png);
+                byte[] hashData;
+
+                using (var f = File.OpenRead(filePath))
+                {
+                    hashData = hash.ComputeHash(f);
+                }
+                string hashString = Convert.ToBase64String(hashData);
+                if (hashString != fileHash)
+                {
+                    Console.WriteLine($"Changed file detected! {fileName}");
+                }
+            }
+                Console.WriteLine($"Finished loading data {atlasTextures[0]}");
         }
 
         static void Main(string[] args)
