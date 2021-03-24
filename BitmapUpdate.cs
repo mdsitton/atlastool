@@ -22,106 +22,115 @@ static class BitmapUpdate
         return String.Empty;
 
     }
-    public static void OverwriteSprite(Bitmap atlas, Bitmap replaceImage, Sprite sprite)
+
+    public static SwapData PreparSwapData(Bitmap atlas, Bitmap replaceImage, Sprite sprite)
     {
         if (sprite.m_SpriteAtlas != null && sprite.m_SpriteAtlas.TryGet(out var m_SpriteAtlas))
         {
             if (m_SpriteAtlas.m_RenderDataMap.TryGetValue(sprite.m_RenderDataKey, out var spriteAtlasData))
             {
-                SwapImage(atlas, replaceImage, sprite, spriteAtlasData.textureRect, spriteAtlasData.textureRectOffset, spriteAtlasData.settingsRaw);
+                var settingsRaw = spriteAtlasData.settingsRaw;
+                var textureRect = spriteAtlasData.textureRect;
+
+                // Verify source and updated texture are the same size
+                if (replaceImage.Width != textureRect.width || replaceImage.Height != textureRect.height)
+                {
+                    return null;
+                }
+
+                var rectf = new RectangleF(textureRect.x, textureRect.y, textureRect.width, textureRect.height);
+                var rect = Rectangle.Round(rectf);
+                if (rect.Width == 0)
+                {
+                    rect.Width = 1;
+                }
+                if (rect.Height == 0)
+                {
+                    rect.Height = 1;
+                }
+                var destRect = new Rectangle(0, 0, rect.Width, rect.Height);
+                replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipY);
+
+                if (settingsRaw.packed == 1)
+                {
+                    //RotateAndFlip
+                    switch (settingsRaw.packingRotation)
+                    {
+                        case SpritePackingRotation.kSPRFlipHorizontal:
+                            replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                            break;
+                        case SpritePackingRotation.kSPRFlipVertical:
+                            replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                            break;
+                        case SpritePackingRotation.kSPRRotate180:
+                            replaceImage.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                            break;
+                        case SpritePackingRotation.kSPRRotate90:
+                            replaceImage.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                            break;
+                    }
+                }
+
+                return new SwapData()
+                {
+                    replaceImage = replaceImage,
+                    sprite = sprite,
+                    textureRect = textureRect,
+                    textureRect2 = rect,
+                    destRect = destRect,
+                    textureRectOffset = spriteAtlasData.textureRectOffset,
+                    settingsRaw = settingsRaw
+                };
             }
         }
+        return null;
     }
-    private static void SwapImage(Bitmap atlas, Bitmap replaceImage, Sprite sprite, Rectf textureRect, Vector2 textureRectOffset, SpriteSettings settingsRaw)
+
+    public class SwapData
     {
-        // Verify source and updated texture are the same size
-        if (replaceImage.Width != textureRect.width || replaceImage.Height != textureRect.height)
-        {
-            return;
-        }
+        public Bitmap replaceImage;
+        public Sprite sprite;
+        public Rectf textureRect;
+        public Rectangle textureRect2;
+        public Rectangle destRect;
+        public Vector2 textureRectOffset;
+        public SpriteSettings settingsRaw;
+    }
 
-        var rectf = new RectangleF(textureRect.x, textureRect.y, textureRect.width, textureRect.height);
-        var rect = Rectangle.Round(rectf);
-        if (rect.Width == 0)
-        {
-            rect.Width = 1;
-        }
-        if (rect.Height == 0)
-        {
-            rect.Height = 1;
-        }
-        var destRect = new Rectangle(0, 0, rect.Width, rect.Height);
-        replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipY);
+    public static Bitmap ClearRect(Bitmap atlas, Rectangle rect)
+    {
+        Rectangle fullRect = new Rectangle(0, 0, atlas.Width, atlas.Height);
+        Region region = new Region(fullRect);
+        GraphicsPath path = new GraphicsPath();
+        path.AddRectangle(rect);
+        region.Exclude(path);
+        Bitmap bm = new Bitmap(atlas);
 
-        if (settingsRaw.packed == 1)
+        using (Graphics gr = Graphics.FromImage(bm))
         {
-            //RotateAndFlip
-            switch (settingsRaw.packingRotation)
+            gr.Clear(System.Drawing.Color.Transparent);
+
+            // Fill the region.
+            gr.SetClip(region, CombineMode.Replace);
+            gr.SmoothingMode = SmoothingMode.AntiAlias;
+            using (TextureBrush brush = new TextureBrush(atlas, fullRect))
             {
-                case SpritePackingRotation.kSPRFlipHorizontal:
-                    replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipX);
-                    break;
-                case SpritePackingRotation.kSPRFlipVertical:
-                    replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    break;
-                case SpritePackingRotation.kSPRRotate180:
-                    replaceImage.RotateFlip(RotateFlipType.Rotate180FlipNone);
-                    break;
-                case SpritePackingRotation.kSPRRotate90:
-                    replaceImage.RotateFlip(RotateFlipType.Rotate90FlipNone);
-                    break;
+                gr.FillRectangle(brush, fullRect);
             }
         }
+        return bm;
+    }
 
-        using (var graphic = Graphics.FromImage(atlas))
+    public static Bitmap ProcessSwaps(Bitmap atlas, SwapData[] swaps)
+    {
+        foreach (var swap in swaps)
         {
-            graphic.FillRectangle(Brushes.Transparent, rect);
-            graphic.DrawImage(replaceImage, rect, destRect, GraphicsUnit.Pixel);
+            atlas = ClearRect(atlas, swap.textureRect2);
+            using (var graphic = Graphics.FromImage(atlas))
+            {
+                graphic.DrawImage(swap.replaceImage, swap.textureRect2, swap.destRect, GraphicsUnit.Pixel);
+            }
         }
-
-        //Tight
-        //if (settingsRaw.packingMode == SpritePackingMode.kSPMTight)
-        //{
-        //    try
-        //    {
-        //        var triangles = SpriteHelper.GetTriangles(sprite.m_RD);
-        //        var points = triangles.Select(x => x.Select(y => new PointF(y.X, y.Y)).ToArray());
-        //        using (var path = new GraphicsPath())
-        //        {
-        //            foreach (var p in points)
-        //            {
-        //                path.AddPolygon(p);
-        //            }
-        //            using (var matr = new Matrix())
-        //            {
-        //                var version = sprite.version;
-        //                if (version[0] < 5
-        //                    || (version[0] == 5 && version[1] < 4)
-        //                    || (version[0] == 5 && version[1] == 4 && version[2] <= 1)) //5.4.1p3 down
-        //                {
-        //                    matr.Translate(sprite.m_Rect.width * 0.5f - textureRectOffset.X, sprite.m_Rect.height * 0.5f - textureRectOffset.Y);
-        //                }
-        //                else
-        //                {
-        //                    matr.Translate(sprite.m_Rect.width * sprite.m_Pivot.X - textureRectOffset.X, sprite.m_Rect.height * sprite.m_Pivot.Y - textureRectOffset.Y);
-        //                }
-        //                matr.Scale(sprite.m_PixelsToUnits, sprite.m_PixelsToUnits);
-        //                path.Transform(matr);
-        //                using (var graphic = Graphics.FromImage(atlas))
-        //                {
-        //                    replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipY);
-        //                    using (var brush = new TextureBrush(replaceImage))
-        //                    {
-        //                        graphic.FillPath(brush, path);
-        //                        return;
-        //                    }
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch
-        //    {
-        //    }
-        //}
+        return atlas;
     }
 }

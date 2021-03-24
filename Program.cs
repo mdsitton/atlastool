@@ -195,6 +195,17 @@ namespace atlastool
             }
             json.ReadStringArray("spriteAtlas", atlasTextures);
 
+            Dictionary<string, Bitmap> atlases = new Dictionary<string, Bitmap>();
+            Dictionary<string, List<BitmapUpdate.SwapData>> swaps = new Dictionary<string, List<BitmapUpdate.SwapData>>();
+
+            foreach (var atlas in atlasTextures)
+            {
+                atlases.Add(atlas, new Bitmap(Path.Combine(inputPath, $"{atlas}.png")));
+                swaps.Add(atlas, new List<BitmapUpdate.SwapData>());
+
+                atlases[atlas].RotateFlip(RotateFlipType.RotateNoneFlipY);
+            }
+
             foreach ((string fileName, string originalName, string fileHash, int pathID) in imageData)
             {
 
@@ -210,28 +221,36 @@ namespace atlastool
                 string hashString = Convert.ToBase64String(hashData);
                 if (hashString != fileHash)
                 {
-                    using (var replaceImage = new Bitmap(filePath))
+                    foreach (var assetFile in assetManager.assetsFileList)
                     {
-                        foreach (var assetFile in assetManager.assetsFileList)
+                        foreach (var obj in assetFile.Objects)
                         {
-                            foreach (var obj in assetFile.Objects)
+                            if (obj is Sprite spr && spr.m_Name == originalName && spr.m_PathID == pathID)
                             {
-                                if (obj is Sprite spr && spr.m_Name == originalName && spr.m_PathID == pathID)
+                                Console.WriteLine($"Changed file detected! {fileName}");
+                                var textureName = BitmapUpdate.GetTextureName(spr);
+                                var atlas = atlases[textureName];
+                                var data = BitmapUpdate.PreparSwapData(atlas, new Bitmap(filePath), spr);
+                                if (data != null)
                                 {
-                                    var textureName = BitmapUpdate.GetTextureName(spr);
-                                    using (var atlas = new Bitmap(Path.Combine(inputPath, $"{textureName}.png")))
-                                    {
-                                        atlas.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                                        BitmapUpdate.OverwriteSprite(atlas, replaceImage, spr);
-                                        atlas.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                                        atlas.Save(Path.Combine(inputPath, $"{textureName}-changed.png"), ImageFormat.Png);
-                                    }
+                                    swaps[textureName].Add(data);
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"Error: Failed to replace image. File name or image size incorrect {fileName}");
                                 }
                             }
                         }
-                        Console.WriteLine($"Changed file detected! {fileName}");
                     }
                 }
+            }
+
+            foreach (var atlas in atlasTextures)
+            {
+                var updatedAtlas = BitmapUpdate.ProcessSwaps(atlases[atlas], swaps[atlas].ToArray());
+                updatedAtlas.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                updatedAtlas.Save(Path.Combine(inputPath, $"{atlas}-changed.png"), ImageFormat.Png);
+                Console.WriteLine("Changed atlas written!");
             }
 
         }
