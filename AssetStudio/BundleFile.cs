@@ -171,6 +171,7 @@ namespace AssetStudio
                 var node = m_DirectoryInfo[i];
                 var file = new StreamFile();
                 fileList[i] = file;
+                file.path = node.path;
                 file.fileName = Path.GetFileName(node.path);
                 if (node.size >= int.MaxValue)
                 {
@@ -231,7 +232,9 @@ namespace AssetStudio
                     }
                 case 1: //LZMA
                     {
-                        blocksInfoUncompresseddStream = SevenZipHelper.StreamDecompress(blocksInfoCompressedStream);
+                        blocksInfoUncompresseddStream = new MemoryStream((int)(m_Header.uncompressedBlocksInfoSize));
+                        SevenZipHelper.StreamDecompress(blocksInfoCompressedStream, blocksInfoUncompresseddStream, m_Header.compressedBlocksInfoSize, m_Header.uncompressedBlocksInfoSize);
+                        blocksInfoUncompresseddStream.Position = 0;
                         blocksInfoCompressedStream.Close();
                         break;
                     }
