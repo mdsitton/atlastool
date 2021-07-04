@@ -15,4 +15,7 @@ You can then go into the `<version number>\sprites` folder to modify textures as
 `-c -i <folder path>`
 
 Recombine the textures from the specified folder into a new atlas.
-For now, the new atlas will need to be added in using something like [Unity Asset Bundle Extractor](https://github.com/DerPopo/UABE/releases/latest).
+
+#### Note:
+For now, the new atlas will need to be added in using [Unity Asset Bundle Extractor Avalonia](https://github.com/nesrak1/UABEA).
+(Use the [latest build](https://nightly.link/nesrak1/UABEA/workflows/dotnet-desktop/master/uabea-windows.zip), the current latest release (`second release`) doesn't currently support the version of Unity that CH uses.)
