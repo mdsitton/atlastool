@@ -30,6 +30,13 @@
     <PackageReference Include="System.Text.Json" Version="5.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="$(SolutionDir)deps\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="deps\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="readme.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
