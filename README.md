@@ -18,4 +18,4 @@ Recombine the textures from the specified folder into a new atlas.
 
 #### Note:
 For now, the new atlas will need to be added in using [Unity Asset Bundle Extractor Avalonia](https://github.com/nesrak1/UABEA).
-(Use the [latest build](https://nightly.link/nesrak1/UABEA/workflows/dotnet-desktop/master/uabea-windows.zip), the current latest release (`second release`) doesn't currently support the version of Unity that CH uses.)
+(Use the [latest build](https://nightly.link/nesrak1/UABEA/workflows/dotnet-desktop/master/uabea-windows.zip), the current latest release ("second release") doesn't currently support the version of Unity that CH uses.)
