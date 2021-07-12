@@ -39,9 +39,9 @@ namespace atlastool
             return assetManager;
         }
 
-        public static void ExportAtlas(string inputPath, string outputpath)
+        public static void ExportAtlas(string inputPath, string outputPath)
         {
-            Console.WriteLine($"Loading asset file {inputPath}");
+            Console.WriteLine($"Loading assets from {inputPath}");
             AssetsManager assetManager = LoadAssetManager(inputPath);
 
             List<Texture2D> atlasTextures = new List<Texture2D>();
@@ -56,15 +56,17 @@ namespace atlastool
                     switch (obj)
                     {
                         case TextAsset text:
+                        {
                             if (text.m_Name == "version")
                             {
                                 gameVersion = System.Text.Encoding.UTF8.GetString(text.m_Script);
                             }
                             break;
+                        }
                     }
                 }
             }
-            string gameversionOutputPath = Path.Combine(outputpath, gameVersion);
+            string gameversionOutputPath = Path.Combine(outputPath, gameVersion);
 
             if (!Directory.Exists(gameversionOutputPath))
             {
@@ -257,43 +259,82 @@ namespace atlastool
 
         static void Main(string[] args)
         {
-            string input = string.Empty;
-            string output = "";
+            string input  = string.Empty;
+            string output = string.Empty;
             bool extract = false;
             bool combine = false;
             for (int i = 0; i < args.Length; ++i)
             {
                 var arg = args[i];
-                if (arg == "--input" || arg == "-i")
+                switch(arg)
                 {
-                    i++;
-                    input = args[i].Trim();
-                }
-                else if (arg == "--output" || arg == "-o")
-                {
-                    i++;
-                    output = args[i].Trim();
-                }
-                else if (arg == "--export" || arg == "-x")
-                {
-                    extract = true;
-                }
-                else if (arg == "--combine" || arg == "-c")
-                {
-                    combine = true;
-                }
-                else if (arg == "--help" || arg == "-h")
-                {
-                    Console.WriteLine($"Atlas Tool \n");
-                    Console.WriteLine($"Usage [arguments]\n");
-                    Console.WriteLine($"arguments:");
-                    Console.WriteLine($"-i|--input \tFile or folder to extract from");
-                    Console.WriteLine($"-o|--output \tOutput directory to extract into");
-                    Console.WriteLine($"-x|--export \tExport sprites from sprite atlas");
-                    Console.WriteLine($"-c|--combine \tCombine modified sprites into new atlas image");
-                    return;
+                    case "--input":
+                    case "-i":
+                    {
+                        i++;
+                        input = args[i].Trim();
+                        if(!Directory.Exists(input))
+                        {
+                            Console.WriteLine($"Error: The specified input path does not exist.");
+                            return;
+                        }
+                        break;
+                    }
+
+                    case "--output":
+                    case "-o":
+                    {
+                        i++;
+                        output = args[i].Trim();
+                        if(!Directory.Exists(output))
+                        {
+                            Console.WriteLine($"Error: The specified output path does not exist.");
+                            return;
+                        }
+                        break;
+                    }
+
+                    case "--export":
+                    case "-x":
+                    {
+                        extract = true;
+                        break;
+                    }
+
+                    case "--combine":
+                    case "-c":
+                    {
+                        combine = true;
+                        break;
+                    }
+
+                    case "--help":
+                    case "-h":
+                    {
+                        Console.WriteLine("Usage:");
+                        Console.WriteLine("-h        | --help          \tDisplay information about available commands.");
+                        Console.WriteLine("-x        | --export        \tExport the sprite atlas and individual sprites.");
+                        Console.WriteLine("                            \tMust be followed by the -i and (optionally) -o argument.");
+                        Console.WriteLine("-c        | --combine       \tCombine modified sprites into a new atlas image.");
+                        Console.WriteLine("                            \tMust be followed by the -i argument.");
+                        Console.WriteLine("-i <path> | --input <path>  \tThe input file or folder to extract/combine from.");
+                        Console.WriteLine("                            \tFor extracting, it can be either the data.unity3d file, resources.assets, or Clone Hero_Data folder.");
+                        Console.WriteLine("                            \tFor combining, it should be the folder you want to combine sprites from.");
+                        Console.WriteLine("-o <path> | --output <path> \tThe output directory to extract to.");
+                        Console.WriteLine("                            \tIf unspecified, defaults to atlastool's own folder.");
+                        Console.WriteLine();
+                        Console.WriteLine("Examples:");
+                        Console.WriteLine("  Extracting:");
+                        Console.WriteLine(@"    -x -i C:\Games\Clone Hero\Clone Hero_Data\unity.data3d -o .\extracted");
+                        Console.WriteLine(@"    -x -i %APPDATA%\Clone Hero Launcher\gameFiles\Clone Hero_Data");
+                        Console.WriteLine();
+                        Console.WriteLine("  Combining:");
+                        Console.WriteLine(@"    -c -i .\v.23.2.2");
+                        return;
+                    }
                 }
             }
+
             if (extract && combine)
             {
                 Console.WriteLine("Error: Cannot extract and combine at the same time");
