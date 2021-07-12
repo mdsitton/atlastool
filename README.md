@@ -43,4 +43,4 @@ This project is licensed under the MIT license. See [license.txt](https://github
 See [thirdparty.txt](https://github.com/mdsitton/atlastool/blob/master/thirdparty.txt) for licenses of third-party assets.
 
 ## Acknowledgements
-[AssetStudio](https://github.com/Perfare/AssetStudio)
+Perfare's [AssetStudio](https://github.com/Perfare/AssetStudio) for texture extraction
