@@ -78,10 +78,10 @@ namespace AssetStudio
                         spriteImage.Mutate(x => x.Flip(FlipMode.Vertical));
                         break;
                     case SpritePackingRotation.kSPRRotate180:
-                        spriteImage.Mutate(x => x.Rotate(RotateMode.Rotate180));
+                        spriteImage.Mutate(x => x.Rotate(180));
                         break;
                     case SpritePackingRotation.kSPRRotate90:
-                        spriteImage.Mutate(x => x.Rotate(RotateMode.Rotate270));
+                        spriteImage.Mutate(x => x.Rotate(270));
                         break;
                 }
             }
