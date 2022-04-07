@@ -9,7 +9,7 @@ namespace AssetStudio
     public class SerializedFile
     {
         public AssetsManager assetsManager;
-        public EndianBinaryReader reader;
+        public FileReader reader;
         public string fullName;
         public string originalPath;
         public string fileName;
@@ -31,12 +31,12 @@ namespace AssetStudio
         public List<SerializedType> m_RefTypes;
         public string userInformation;
 
-        public SerializedFile(AssetsManager assetsManager, string fullName, EndianBinaryReader reader)
+        public SerializedFile(FileReader reader, AssetsManager assetsManager)
         {
             this.assetsManager = assetsManager;
             this.reader = reader;
-            this.fullName = fullName;
-            fileName = Path.GetFileName(fullName);
+            fullName = reader.FullPath;
+            fileName = reader.FileName;
 
             // ReadHeader
             header = new SerializedFileHeader();
@@ -68,7 +68,7 @@ namespace AssetStudio
             // ReadMetadata
             if (m_FileEndianess == 0)
             {
-                reader.endian = EndianType.LittleEndian;
+                reader.Endian = EndianType.LittleEndian;
             }
             if (header.m_Version >= SerializedFileFormatVersion.kUnknown_7)
             {
@@ -219,11 +219,14 @@ namespace AssetStudio
 
         public void SetVersion(string stringVersion)
         {
-            unityVersion = stringVersion;
-            var buildSplit = Regex.Replace(stringVersion, @"\d", "").Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-            buildType = new BuildType(buildSplit[0]);
-            var versionSplit = Regex.Replace(stringVersion, @"\D", ".").Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
-            version = versionSplit.Select(int.Parse).ToArray();
+            if (stringVersion != strippedVersion)
+            {
+                unityVersion = stringVersion;
+                var buildSplit = Regex.Replace(stringVersion, @"\d", "").Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+                buildType = new BuildType(buildSplit[0]);
+                var versionSplit = Regex.Replace(stringVersion, @"\D", ".").Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
+                version = versionSplit.Select(int.Parse).ToArray();
+            }
         }
 
         private SerializedType ReadSerializedType(bool isRefType)
@@ -371,41 +374,8 @@ namespace AssetStudio
             ObjectsDic.Add(obj.m_PathID, obj);
         }
 
-        public static bool IsSerializedFile(EndianBinaryReader reader)
-        {
-            var fileSize = reader.BaseStream.Length;
-            if (fileSize < 20)
-            {
-                return false;
-            }
-            var m_MetadataSize = reader.ReadUInt32();
-            long m_FileSize = reader.ReadUInt32();
-            var m_Version = reader.ReadUInt32();
-            long m_DataOffset = reader.ReadUInt32();
-            var m_Endianess = reader.ReadByte();
-            var m_Reserved = reader.ReadBytes(3);
-            if (m_Version >= 22)
-            {
-                if (fileSize < 48)
-                {
-                    return false;
-                }
-                m_MetadataSize = reader.ReadUInt32();
-                m_FileSize = reader.ReadInt64();
-                m_DataOffset = reader.ReadInt64();
-            }
-            if (m_FileSize != fileSize)
-            {
-                reader.Position = 0;
-                return false;
-            }
-            if (m_DataOffset > fileSize)
-            {
-                reader.Position = 0;
-                return false;
-            }
-            reader.Position = 0;
-            return true;
-        }
+        public bool IsVersionStripped => unityVersion == strippedVersion;
+
+        private const string strippedVersion = "0.0.0";
     }
 }
