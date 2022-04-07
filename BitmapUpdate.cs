@@ -24,7 +24,7 @@ static class BitmapUpdate
 
     }
 
-    public static SwapData PrepareSwapData(Image<Bgra32> atlas, Image<Bgra32> replaceImage, Sprite sprite)
+    public static void ProcessChanges(Image<Bgra32> atlas, Image<Bgra32> replaceImage, Sprite sprite)
     {
         if (sprite.m_SpriteAtlas != null && sprite.m_SpriteAtlas.TryGet(out var m_SpriteAtlas))
         {
@@ -36,7 +36,7 @@ static class BitmapUpdate
                 // Verify source and updated texture are the same size
                 if (replaceImage.Width != textureRect.width || replaceImage.Height != textureRect.height)
                 {
-                    return null;
+                    return;
                 }
 
                 var rectf = new RectangleF(textureRect.x, textureRect.y, textureRect.width, textureRect.height);
@@ -72,57 +72,9 @@ static class BitmapUpdate
                     }
                 }
 
-                return new SwapData()
-                {
-                    replaceImage = replaceImage,
-                    sprite = sprite,
-                    textureRect = textureRect,
-                    textureRect2 = rect,
-                    destRect = destRect,
-                    textureRectOffset = spriteAtlasData.textureRectOffset,
-                    settingsRaw = settingsRaw
-                };
+                var point = new Point(destRect.Left, destRect.Top);
+                atlas.Mutate(x => x.DrawImage(replaceImage, point, PixelColorBlendingMode.Add, PixelAlphaCompositionMode.Clear, 1.0f));
             }
-        }
-        return null;
-    }
-
-    public class SwapData
-    {
-        public Image<Bgra32> replaceImage;
-        public Sprite sprite;
-        public Rectf textureRect;
-        public Rectangle textureRect2;
-        public Rectangle destRect;
-        public Vector2 textureRectOffset;
-        public SpriteSettings settingsRaw;
-    }
-
-    public static void ClearRect(Image<Bgra32> atlas, Rectangle rect)
-    {
-        var graphicsOptions = new GraphicsOptions
-        {
-            AlphaCompositionMode = PixelAlphaCompositionMode.Clear
-        };
-        var options = new DrawingOptions
-        {
-            GraphicsOptions = graphicsOptions
-        };
-        atlas.Mutate(x => x.Fill(options, SixLabors.ImageSharp.Color.Transparent, rect));
-    }
-
-    public static void ReplaceRect(Image<Bgra32> atlas, Image<Bgra32> image, Rectangle rect)
-    {
-        var point = new Point(rect.Left, rect.Top);
-        atlas.Mutate(x => x.DrawImage(image, point, PixelColorBlendingMode.Add, 1.0f));
-    }
-
-    public static void ProcessSwaps(Image<Bgra32> atlas, SwapData[] swaps)
-    {
-        foreach (var swap in swaps)
-        {
-            ClearRect(atlas, swap.textureRect2);
-            ReplaceRect(atlas, swap.replaceImage, swap.destRect);
         }
     }
 }

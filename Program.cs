@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using AssetStudio;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -14,7 +17,7 @@ namespace atlastool
 {
     class Program
     {
-        static SHA1 hash = SHA1.Create();
+        [ThreadStatic] static SHA1 hash;
 
         public static AssetsManager LoadAssetManager(string path)
         {
@@ -36,42 +39,66 @@ namespace atlastool
             return assetManager;
         }
 
-        public static void ExportAtlas(string inputPath, string outputPath)
+        public static string GetGameVersion(List<SerializedFile> assetList)
         {
-            Console.WriteLine($"Loading assets from {inputPath}");
-            AssetsManager assetManager = LoadAssetManager(inputPath);
-
-            List<Texture2D> atlasTextures = new List<Texture2D>();
-            string gameVersion = string.Empty;
-
-
-            // find game version first
-            foreach (var file in assetManager.assetsFileList)
+            foreach (var file in assetList)
             {
                 foreach (var obj in file.Objects)
                 {
                     switch (obj)
                     {
                         case TextAsset text:
+                            if (text.m_Name == "version")
                             {
-                                if (text.m_Name == "version")
-                                {
-                                    gameVersion = System.Text.Encoding.UTF8.GetString(text.m_Script);
-                                }
-                                break;
+                                return System.Text.Encoding.UTF8.GetString(text.m_Script);
                             }
+                            break;
                     }
                 }
             }
-            string gameversionOutputPath = Path.Combine(outputPath, gameVersion);
+            return String.Empty;
+        }
+
+        public class SpriteJsonData
+        {
+            public string fileName;
+            public int pathID;
+            public string hash;
+            public string name;
+        }
+
+        private static string jsonOutputPath;
+        private static string spriteOutputDir;
+        private static string gameVersion;
+        private static string inputPath;
+        private static string gameversionOutputPath;
+
+        public static void StartExtract(string input, string output)
+        {
+
+
+            Console.WriteLine($"Loading assets from {input}");
+            inputPath = input;
+            AssetsManager assetManager = LoadAssetManager(input);
+            SetupPaths(assetManager, output);
+            ExportAtlas(assetManager);
+        }
+
+        public static void SetupPaths(AssetsManager assetsManager, string outputPath)
+        {
+
+            // find game version first
+            gameVersion = GetGameVersion(assetsManager.assetsFileList);
+
+            gameversionOutputPath = Path.Combine(outputPath, gameVersion);
 
             if (!Directory.Exists(gameversionOutputPath))
             {
                 Directory.CreateDirectory(gameversionOutputPath);
             }
 
-            string jsonOutputPath = Path.Combine(gameversionOutputPath, $"spriteData.json");
-            string spriteOutputDir = Path.Combine(gameversionOutputPath, $"sprites");
+            jsonOutputPath = Path.Combine(gameversionOutputPath, $"spriteData.json");
+            spriteOutputDir = Path.Combine(gameversionOutputPath, $"sprites");
             if (!Directory.Exists(spriteOutputDir))
             {
                 Directory.CreateDirectory(spriteOutputDir);
@@ -80,6 +107,11 @@ namespace atlastool
             {
                 File.Delete(jsonOutputPath);
             }
+        }
+
+        public static void WriteSpriteJsonData(ConcurrentBag<SpriteJsonData> spriteData, List<Texture2D> atlasTextures)
+        {
+
             using (var fs = File.OpenWrite(jsonOutputPath))
             using (var json = new Utf8JsonWriter(fs, new JsonWriterOptions { Indented = true }))
             {
@@ -88,79 +120,124 @@ namespace atlastool
                 json.WriteString("gameVersion", gameVersion);
                 json.WriteString("unityAssetPath", inputPath);
                 json.WriteStartArray("imageData");
-                foreach (var file in assetManager.assetsFileList)
+
+                foreach (var data in spriteData)
                 {
-                    foreach (var obj in file.Objects)
-                    {
-                        switch (obj)
-                        {
-                            case Sprite spr:
-                                bool foundAtlas = false;
-                                if (spr.m_SpriteAtlas.TryGet(out var atlas))
-                                {
-                                    if (atlas.m_RenderDataMap.TryGetValue(spr.m_RenderDataKey, out var spriteAtlasData) && spriteAtlasData.texture.TryGet(out var texture))
-                                    {
 
-                                        Console.WriteLine($"Found atlas texture {texture.m_Name}");
-                                        if (!atlasTextures.Contains(texture))
-                                        {
-                                            atlasTextures.Add(texture);
-                                        }
-                                    }
-                                    if (atlas.m_Name == "fiveFretAtlas")
-                                    {
-                                        foundAtlas = true;
-                                    }
-                                }
-
-                                if (!foundAtlas)
-                                    continue;
-
-                                var image = SpriteHelper.GetImage(spr);
-                                string filename = $"{spr.m_Name}_{spr.m_PathID}.png";
-                                string filePath = Path.Combine(spriteOutputDir, filename);
-
-                                image.SaveAsPng(filePath);
-                                byte[] hashData;
-
-                                using (var f = File.OpenRead(filePath))
-                                {
-                                    hashData = hash.ComputeHash(f);
-                                }
-                                string hashString = Convert.ToBase64String(hashData);
-
-                                json.WriteStartObject();
-                                json.WriteString("fileName", filename);
-                                json.WriteString("name", spr.m_Name);
-                                json.WriteString("hash", hashString);
-                                json.WriteNumber("pathID", (int)spr.m_PathID);
-                                json.WriteEndObject();
-
-                                Console.WriteLine($"fiveFretAtlas Sprite {spr.m_Name} saved");
-                                break;
-                            case SpriteAtlas spriteAtlas:
-                                Console.WriteLine($"Atlas {spriteAtlas.m_Name}");
-                                break;
-                        }
-                    }
+                    json.WriteStartObject();
+                    json.WriteString("fileName", data.fileName);
+                    json.WriteString("name", data.name);
+                    json.WriteString("hash", data.hash);
+                    json.WriteNumber("pathID", data.pathID);
+                    json.WriteEndObject();
                 }
                 json.WriteEndArray();
-
                 json.WriteStartArray("spriteAtlas");
                 foreach (var texture in atlasTextures)
                 {
-                    var imageSavePath = Path.Combine(gameversionOutputPath, $"{texture.m_Name}.png");
-                    var image = texture.ConvertToImage(true);
-                    image.SaveAsPng(imageSavePath);
-                    Console.WriteLine($"Atlas texture2d {texture.m_Name} saved");
                     json.WriteStringValue(texture.m_Name);
                 }
                 json.WriteEndArray();
 
                 json.WriteEndObject();
+
             }
         }
 
+        public static void ExportAtlas(AssetsManager assetManager)
+        {
+
+            List<Texture2D> atlasTextures = new List<Texture2D>();
+
+            Image<Bgra32> atlasImage = null;
+
+            List<Sprite> foundSprites = new List<Sprite>();
+            foreach (var file in assetManager.assetsFileList)
+            {
+                foreach (var obj in file.Objects)
+                {
+                    if (obj is Sprite spr)
+                    {
+                        if (spr.m_SpriteAtlas.TryGet(out var atlas))
+                        {
+                            if (atlas.m_RenderDataMap.TryGetValue(spr.m_RenderDataKey, out var spriteAtlasData) && spriteAtlasData.texture.TryGet(out var texture))
+                            {
+
+                                if (!atlasTextures.Contains(texture))
+                                {
+                                    Console.WriteLine($"Found atlas texture {texture.m_Name}");
+                                    atlasTextures.Add(texture);
+                                    atlasImage = texture.ConvertToImage(false);
+                                }
+                            }
+                            if (atlas.m_Name == "fiveFretAtlas")
+                            {
+                                foundSprites.Add(spr);
+                                Console.WriteLine($"Queued atlas sprite {spr.m_Name}");
+                            }
+                        }
+                    }
+                }
+            }
+
+            using (atlasImage)
+            {
+                ConcurrentBag<SpriteJsonData> jsonData = new ConcurrentBag<SpriteJsonData>();
+                Parallel.ForEach(foundSprites, spr =>
+                {
+                    if (spr.m_SpriteAtlas.TryGet(out var atlas))
+                    {
+                        if (atlas.m_RenderDataMap.TryGetValue(spr.m_RenderDataKey, out var atlasData))
+                        {
+
+                            var image = SpriteHelper.CutImage(spr, atlasImage, atlasData.textureRect, atlasData.textureRectOffset, atlasData.downscaleMultiplier, atlasData.settingsRaw);
+                            string filename = $"{spr.m_Name}_{spr.m_PathID}.png";
+                            string filePath = Path.Combine(spriteOutputDir, filename);
+                            string hashString = string.Empty;
+
+                            using (MemoryStream ms = new MemoryStream())
+                            {
+                                image.SaveAsPng(ms);
+                                ms.Flush();
+                                ms.Seek(0, SeekOrigin.Begin);
+
+                                if (hash == null)
+                                {
+                                    hash = SHA1.Create();
+                                }
+
+                                byte[] hashData = hash.ComputeHash(ms);
+                                hashString = Convert.ToBase64String(hashData);
+                                using (var os = File.OpenWrite(filePath))
+                                {
+                                    ms.WriteTo(os);
+                                }
+                                hashString = Convert.ToBase64String(hashData);
+
+                                var spriteData = new SpriteJsonData
+                                {
+                                    fileName = filePath,
+                                    name = spr.m_Name,
+                                    pathID = (int)spr.m_PathID,
+                                    hash = hashString
+                                };
+                                jsonData.Add(spriteData);
+                            }
+                            Console.WriteLine($"fiveFretAtlas Sprite {spr.m_Name} saved");
+                        }
+                    }
+                });
+                foreach (var texture in atlasTextures)
+                {
+                    var imageSavePath = Path.Combine(gameversionOutputPath, $"{texture.m_Name}.png");
+                    // var image = texture.ConvertToImage(true);
+                    atlasImage.Mutate((x) => x.Flip(FlipMode.Vertical));
+                    atlasImage.SaveAsPng(imageSavePath);
+                    Console.WriteLine($"Atlas texture2d {texture.m_Name} saved");
+                }
+                WriteSpriteJsonData(jsonData, atlasTextures);
+            }
+        }
 
         public static void CombineAtlas(string inputPath)
         {
@@ -194,14 +271,12 @@ namespace atlastool
             json.ReadStringArray("spriteAtlas", atlasTextures);
 
             Dictionary<string, Image<Bgra32>> atlases = new Dictionary<string, Image<Bgra32>>();
-            Dictionary<string, List<BitmapUpdate.SwapData>> swaps = new Dictionary<string, List<BitmapUpdate.SwapData>>();
 
             foreach (var atlas in atlasTextures)
             {
                 var img = Image.Load<Bgra32>(Path.Combine(inputPath, $"{atlas}.png"));
 
                 atlases.Add(atlas, img);
-                swaps.Add(atlas, new List<BitmapUpdate.SwapData>());
                 atlases[atlas].Mutate((x) => x.Flip(FlipMode.Vertical));
             }
 
@@ -232,15 +307,7 @@ namespace atlastool
 
                                 var img = Image.Load<Bgra32>(filePath);
 
-                                var data = BitmapUpdate.PrepareSwapData(atlas, img, spr);
-                                if (data != null)
-                                {
-                                    swaps[textureName].Add(data);
-                                }
-                                else
-                                {
-                                    Console.WriteLine($"Error: Failed to replace image. File name or image size incorrect {fileName}");
-                                }
+                                BitmapUpdate.ProcessChanges(atlas, img, spr);
                             }
                         }
                     }
@@ -250,12 +317,10 @@ namespace atlastool
             foreach (var atlas in atlasTextures)
             {
                 var atlasImage = atlases[atlas];
-                BitmapUpdate.ProcessSwaps(atlasImage, swaps[atlas].ToArray());
                 atlasImage.Mutate((x) => x.Flip(FlipMode.Vertical));
                 atlasImage.SaveAsPng(Path.Combine(inputPath, $"{atlas}-changed.png"));
                 Console.WriteLine("Changed atlas written!");
             }
-
         }
 
         static void Main(string[] args)
@@ -343,7 +408,7 @@ namespace atlastool
             }
             if (extract && input != string.Empty)
             {
-                ExportAtlas(input, output);
+                StartExtract(input, output);
             }
             else if (extract)
             {
