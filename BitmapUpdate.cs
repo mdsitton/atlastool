@@ -21,7 +21,6 @@ static class BitmapUpdate
             }
         }
         return String.Empty;
-
     }
 
     public static void ProcessChanges(Image<Bgra32> atlas, Image<Bgra32> replaceImage, Sprite sprite)
