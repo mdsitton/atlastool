@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -228,7 +228,7 @@ namespace atlastool
                                 };
                                 jsonData.Add(spriteData);
                             }
-                            Console.WriteLine($"fiveFretAtlas Sprite {spr.m_Name} saved");
+                            Console.WriteLine($"Saved atlas sprite {spr.m_Name}");
                         }
                     }
                 });
@@ -238,7 +238,7 @@ namespace atlastool
                     // var image = texture.ConvertToImage(true);
                     atlasImage.Mutate((x) => x.Flip(FlipMode.Vertical));
                     atlasImage.SaveAsPng(imageSavePath);
-                    Console.WriteLine($"Atlas texture2d {texture.m_Name} saved");
+                    Console.WriteLine($"Saved atlas {texture.m_Name}");
                 }
                 WriteSpriteJsonData(jsonData, atlasTextures);
             }
@@ -251,7 +251,7 @@ namespace atlastool
             Utf8JsonReader json = new Utf8JsonReader(jsonText);
             json.ReadObjectStart();
             string gameVersion = json.ReadString("gameVersion");
-            Console.WriteLine($"Found data folder for game version: {gameVersion}");
+            Console.WriteLine($"Found data folder for game version {gameVersion}");
 
             string spriteDir = Path.Combine(inputPath, $"sprites");
 
@@ -357,7 +357,7 @@ namespace atlastool
                             input = args[i].Trim();
                             if (!Directory.Exists(input))
                             {
-                                Console.WriteLine($"Error: The specified input path does not exist.");
+                                Console.WriteLine("Error: The specified input path does not exist. Please ensure it has been typed correctly (use quotes if it has spaces).");
                                 return;
                             }
                             break;
@@ -404,7 +404,7 @@ namespace atlastool
                             Console.WriteLine("Usage:");
                             Console.WriteLine("-h        | --help          \tDisplay information about available commands.");
                             Console.WriteLine("-x        | --export        \tExport the sprite atlas and individual sprites.");
-                            Console.WriteLine("                            \tMust be followed by the -i and (optionally) -o argument.");
+                            Console.WriteLine("                            \tMust be followed by the -i and (optionally) -o arguments.");
                             Console.WriteLine("-c        | --combine       \tCombine modified sprites into a new atlas image.");
                             Console.WriteLine("                            \tMust be followed by the -i argument.");
                             Console.WriteLine("-i <path> | --input <path>  \tThe input file or folder to extract/combine from.");
@@ -414,11 +414,11 @@ namespace atlastool
                             Console.WriteLine("                            \tIf unspecified, defaults to atlastool's own folder.");
                             Console.WriteLine();
                             Console.WriteLine("Examples:");
-                            Console.WriteLine("  Extracting:");
+                            Console.WriteLine("- Extracting:");
                             Console.WriteLine(@"    -x -i C:\Games\Clone Hero\Clone Hero_Data\unity.data3d -o .\extracted");
                             Console.WriteLine(@"    -x -i %APPDATA%\Clone Hero Launcher\gameFiles\Clone Hero_Data");
                             Console.WriteLine();
-                            Console.WriteLine("  Combining:");
+                            Console.WriteLine("- Combining:");
                             Console.WriteLine(@"    -c -i .\v.23.2.2");
                             return;
                         }
@@ -427,7 +427,7 @@ namespace atlastool
 
             if (extract && combine)
             {
-                Console.WriteLine("Error: Cannot extract and combine at the same time");
+                Console.WriteLine("Error: Cannot extract and combine at the same time.");
                 return;
             }
             if (extract && input != string.Empty)
@@ -436,7 +436,7 @@ namespace atlastool
             }
             else if (extract)
             {
-                Console.WriteLine("Error: Export needs an input and output path");
+                Console.WriteLine("Error: Exporting requires an input path to the game's data folder or unity.data3d. Use the -i parameter to specify the path.");
             }
 
             if (combine && input != string.Empty)
@@ -445,7 +445,7 @@ namespace atlastool
             }
             else if (combine)
             {
-                Console.WriteLine("Error: Combine needs an input path");
+                Console.WriteLine("Error: Combining requires an input path to the folder with the sprites to combine. Use the -i parameter to specify the path.");
             }
         }
     }
