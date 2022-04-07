@@ -21,7 +21,6 @@ static class BitmapUpdate
             }
         }
         return String.Empty;
-
     }
 
     public static void ProcessChanges(Image<Bgra32> atlas, Image<Bgra32> replaceImage, Sprite sprite)
@@ -49,7 +48,7 @@ static class BitmapUpdate
                 {
                     rect.Height = 1;
                 }
-                var destRect = new Rectangle(0, 0, rect.Width, rect.Height);
+                var destRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
                 replaceImage.Mutate((x) => x.Flip(FlipMode.Vertical));
 
                 if (settingsRaw.packed == 1)
@@ -73,7 +72,7 @@ static class BitmapUpdate
                 }
 
                 var point = new Point(destRect.Left, destRect.Top);
-                atlas.Mutate(x => x.DrawImage(replaceImage, point, PixelColorBlendingMode.Add, PixelAlphaCompositionMode.Clear, 1.0f));
+                atlas.Mutate(x => x.DrawImage(replaceImage, point, PixelColorBlendingMode.Add, PixelAlphaCompositionMode.Src, 1.0f));
             }
         }
     }
