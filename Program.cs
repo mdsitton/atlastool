@@ -33,7 +33,6 @@ namespace atlastool
             }
             else
             {
-                Console.WriteLine("Error loading file");
                 return null;
             }
             return assetManager;
@@ -80,6 +79,12 @@ namespace atlastool
             Console.WriteLine($"Loading assets from {input}");
             inputPath = input;
             AssetsManager assetManager = LoadAssetManager(input);
+            if (assetManager == null)
+            {
+                Console.WriteLine("Error: Could not load game data. Please ensure the input path is for the game's data folder or data.unity3d.");
+                return;
+            }
+
             SetupPaths(assetManager, output);
             ExportAtlas(assetManager);
         }
@@ -253,6 +258,12 @@ namespace atlastool
             string assetDataPath = json.ReadString("unityAssetPath");
 
             AssetsManager assetManager = LoadAssetManager(assetDataPath);
+            if (assetManager == null)
+            {
+                Console.WriteLine("Error: Could not load game data from stored data path.");
+                return;
+            }
+
             List<(string fileName, string name, string hash, int pathID)> imageData = new List<(string fileName, string name, string hash, int pathID)>();
             List<string> atlasTextures = new List<string>();
 
