@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -290,6 +290,11 @@ namespace atlastool
 
                 using (var f = File.OpenRead(filePath))
                 {
+                    if (hash == null)
+                    {
+                        hash = SHA1.Create();
+                    }
+
                     hashData = hash.ComputeHash(f);
                 }
                 string hashString = Convert.ToBase64String(hashData);
