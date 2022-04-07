@@ -97,7 +97,7 @@ namespace AssetStudio
                             {
                                 mask.Mutate(x => x.Fill(options, SixLabors.ImageSharp.Color.Red, path));
                                 var bursh = new ImageBrush(mask);
-                                spriteImage.Mutate(x => x.Fill(graphicsOptions, bursh));
+                                spriteImage.Mutate(x => x.Fill(options, bursh));
                                 spriteImage.Mutate(x => x.Flip(FlipMode.Vertical));
                                 return spriteImage;
                             }

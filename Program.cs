@@ -1,23 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
 using AssetStudio;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace atlastool
 {
     class Program
     {
         static SHA1 hash = SHA1.Create();
-        public static Bitmap CreateBitmapFromTexture2D(Texture2D texture)
-        {
-            var bitmap = new Bitmap(texture.m_Width, texture.m_Height, PixelFormat.Format32bppArgb);
-
-            return bitmap;
-        }
 
         public static AssetsManager LoadAssetManager(string path)
         {
@@ -56,13 +53,13 @@ namespace atlastool
                     switch (obj)
                     {
                         case TextAsset text:
-                        {
-                            if (text.m_Name == "version")
                             {
-                                gameVersion = System.Text.Encoding.UTF8.GetString(text.m_Script);
+                                if (text.m_Name == "version")
+                                {
+                                    gameVersion = System.Text.Encoding.UTF8.GetString(text.m_Script);
+                                }
+                                break;
                             }
-                            break;
-                        }
                     }
                 }
             }
@@ -123,7 +120,7 @@ namespace atlastool
                                 string filename = $"{spr.m_Name}_{spr.m_PathID}.png";
                                 string filePath = Path.Combine(spriteOutputDir, filename);
 
-                                image.Save(filePath, ImageFormat.Png);
+                                image.SaveAsPng(filePath);
                                 byte[] hashData;
 
                                 using (var f = File.OpenRead(filePath))
@@ -152,10 +149,9 @@ namespace atlastool
                 json.WriteStartArray("spriteAtlas");
                 foreach (var texture in atlasTextures)
                 {
-                    var bitmap = texture.ConvertToBitmap(false);
-
-                    bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    bitmap.Save(Path.Combine(gameversionOutputPath, $"{texture.m_Name}.png"), ImageFormat.Png);
+                    var imageSavePath = Path.Combine(gameversionOutputPath, $"{texture.m_Name}.png");
+                    var image = texture.ConvertToImage(true);
+                    image.SaveAsPng(imageSavePath);
                     Console.WriteLine($"Atlas texture2d {texture.m_Name} saved");
                     json.WriteStringValue(texture.m_Name);
                 }
@@ -197,15 +193,16 @@ namespace atlastool
             }
             json.ReadStringArray("spriteAtlas", atlasTextures);
 
-            Dictionary<string, Bitmap> atlases = new Dictionary<string, Bitmap>();
+            Dictionary<string, Image<Bgra32>> atlases = new Dictionary<string, Image<Bgra32>>();
             Dictionary<string, List<BitmapUpdate.SwapData>> swaps = new Dictionary<string, List<BitmapUpdate.SwapData>>();
 
             foreach (var atlas in atlasTextures)
             {
-                atlases.Add(atlas, new Bitmap(Path.Combine(inputPath, $"{atlas}.png")));
-                swaps.Add(atlas, new List<BitmapUpdate.SwapData>());
+                var img = Image.Load<Bgra32>(Path.Combine(inputPath, $"{atlas}.png"));
 
-                atlases[atlas].RotateFlip(RotateFlipType.RotateNoneFlipY);
+                atlases.Add(atlas, img);
+                swaps.Add(atlas, new List<BitmapUpdate.SwapData>());
+                atlases[atlas].Mutate((x) => x.Flip(FlipMode.Vertical));
             }
 
             foreach ((string fileName, string originalName, string fileHash, int pathID) in imageData)
@@ -232,7 +229,10 @@ namespace atlastool
                                 Console.WriteLine($"Changed file detected! {fileName}");
                                 var textureName = BitmapUpdate.GetTextureName(spr);
                                 var atlas = atlases[textureName];
-                                var data = BitmapUpdate.PreparSwapData(atlas, new Bitmap(filePath), spr);
+
+                                var img = Image.Load<Bgra32>(filePath);
+
+                                var data = BitmapUpdate.PrepareSwapData(atlas, img, spr);
                                 if (data != null)
                                 {
                                     swaps[textureName].Add(data);
@@ -249,9 +249,10 @@ namespace atlastool
 
             foreach (var atlas in atlasTextures)
             {
-                var updatedAtlas = BitmapUpdate.ProcessSwaps(atlases[atlas], swaps[atlas].ToArray());
-                updatedAtlas.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                updatedAtlas.Save(Path.Combine(inputPath, $"{atlas}-changed.png"), ImageFormat.Png);
+                var atlasImage = atlases[atlas];
+                BitmapUpdate.ProcessSwaps(atlasImage, swaps[atlas].ToArray());
+                atlasImage.Mutate((x) => x.Flip(FlipMode.Vertical));
+                atlasImage.SaveAsPng(Path.Combine(inputPath, $"{atlas}-changed.png"));
                 Console.WriteLine("Changed atlas written!");
             }
 
@@ -259,79 +260,79 @@ namespace atlastool
 
         static void Main(string[] args)
         {
-            string input  = string.Empty;
+            string input = string.Empty;
             string output = string.Empty;
             bool extract = false;
             bool combine = false;
             for (int i = 0; i < args.Length; ++i)
             {
                 var arg = args[i];
-                switch(arg)
+                switch (arg)
                 {
                     case "--input":
                     case "-i":
-                    {
-                        i++;
-                        input = args[i].Trim();
-                        if(!Directory.Exists(input))
                         {
-                            Console.WriteLine($"Error: The specified input path does not exist.");
-                            return;
+                            i++;
+                            input = args[i].Trim();
+                            if (!Directory.Exists(input))
+                            {
+                                Console.WriteLine($"Error: The specified input path does not exist.");
+                                return;
+                            }
+                            break;
                         }
-                        break;
-                    }
 
                     case "--output":
                     case "-o":
-                    {
-                        i++;
-                        output = args[i].Trim();
-                        if(!Directory.Exists(output))
                         {
-                            Console.WriteLine($"Error: The specified output path does not exist.");
-                            return;
+                            i++;
+                            output = args[i].Trim();
+                            if (!Directory.Exists(output))
+                            {
+                                Console.WriteLine($"Error: The specified output path does not exist.");
+                                return;
+                            }
+                            break;
                         }
-                        break;
-                    }
 
                     case "--export":
                     case "-x":
-                    {
-                        extract = true;
-                        break;
-                    }
+                        {
+                            extract = true;
+                            break;
+                        }
 
                     case "--combine":
                     case "-c":
-                    {
-                        combine = true;
-                        break;
-                    }
+                        {
+                            combine = true;
+                            break;
+                        }
 
                     case "--help":
                     case "-h":
-                    {
-                        Console.WriteLine("Usage:");
-                        Console.WriteLine("-h        | --help          \tDisplay information about available commands.");
-                        Console.WriteLine("-x        | --export        \tExport the sprite atlas and individual sprites.");
-                        Console.WriteLine("                            \tMust be followed by the -i and (optionally) -o argument.");
-                        Console.WriteLine("-c        | --combine       \tCombine modified sprites into a new atlas image.");
-                        Console.WriteLine("                            \tMust be followed by the -i argument.");
-                        Console.WriteLine("-i <path> | --input <path>  \tThe input file or folder to extract/combine from.");
-                        Console.WriteLine("                            \tFor extracting, it can be either the data.unity3d file, resources.assets, or Clone Hero_Data folder.");
-                        Console.WriteLine("                            \tFor combining, it should be the folder you want to combine sprites from.");
-                        Console.WriteLine("-o <path> | --output <path> \tThe output directory to extract to.");
-                        Console.WriteLine("                            \tIf unspecified, defaults to atlastool's own folder.");
-                        Console.WriteLine();
-                        Console.WriteLine("Examples:");
-                        Console.WriteLine("  Extracting:");
-                        Console.WriteLine(@"    -x -i C:\Games\Clone Hero\Clone Hero_Data\unity.data3d -o .\extracted");
-                        Console.WriteLine(@"    -x -i %APPDATA%\Clone Hero Launcher\gameFiles\Clone Hero_Data");
-                        Console.WriteLine();
-                        Console.WriteLine("  Combining:");
-                        Console.WriteLine(@"    -c -i .\v.23.2.2");
-                        return;
-                    }
+                        {
+                            Console.WriteLine("Usage:");
+                            Console.WriteLine("-h        | --help          \tDisplay information about available commands.");
+                            Console.WriteLine("-x        | --export        \tExport the sprite atlas and individual sprites.");
+                            Console.WriteLine("                            \tMust be followed by the -i and (optionally) -o argument.");
+                            Console.WriteLine("-c        | --combine       \tCombine modified sprites into a new atlas image.");
+                            Console.WriteLine("                            \tMust be followed by the -i argument.");
+                            Console.WriteLine("-i <path> | --input <path>  \tThe input file or folder to extract/combine from.");
+                            Console.WriteLine("                            \tFor extracting, it can be either the data.unity3d file, resources.assets, or Clone Hero_Data folder.");
+                            Console.WriteLine("                            \tFor combining, it should be the folder you want to combine sprites from.");
+                            Console.WriteLine("-o <path> | --output <path> \tThe output directory to extract to.");
+                            Console.WriteLine("                            \tIf unspecified, defaults to atlastool's own folder.");
+                            Console.WriteLine();
+                            Console.WriteLine("Examples:");
+                            Console.WriteLine("  Extracting:");
+                            Console.WriteLine(@"    -x -i C:\Games\Clone Hero\Clone Hero_Data\unity.data3d -o .\extracted");
+                            Console.WriteLine(@"    -x -i %APPDATA%\Clone Hero Launcher\gameFiles\Clone Hero_Data");
+                            Console.WriteLine();
+                            Console.WriteLine("  Combining:");
+                            Console.WriteLine(@"    -c -i .\v.23.2.2");
+                            return;
+                        }
                 }
             }
 

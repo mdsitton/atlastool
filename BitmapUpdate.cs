@@ -1,12 +1,13 @@
 ﻿using AssetStudio;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Drawing.Processing;
 
 static class BitmapUpdate
 {
@@ -23,7 +24,7 @@ static class BitmapUpdate
 
     }
 
-    public static SwapData PreparSwapData(Bitmap atlas, Bitmap replaceImage, Sprite sprite)
+    public static SwapData PrepareSwapData(Image<Bgra32> atlas, Image<Bgra32> replaceImage, Sprite sprite)
     {
         if (sprite.m_SpriteAtlas != null && sprite.m_SpriteAtlas.TryGet(out var m_SpriteAtlas))
         {
@@ -49,7 +50,7 @@ static class BitmapUpdate
                     rect.Height = 1;
                 }
                 var destRect = new Rectangle(0, 0, rect.Width, rect.Height);
-                replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                replaceImage.Mutate((x) => x.Flip(FlipMode.Vertical));
 
                 if (settingsRaw.packed == 1)
                 {
@@ -57,16 +58,16 @@ static class BitmapUpdate
                     switch (settingsRaw.packingRotation)
                     {
                         case SpritePackingRotation.kSPRFlipHorizontal:
-                            replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                            replaceImage.Mutate((x) => x.Flip(FlipMode.Horizontal));
                             break;
                         case SpritePackingRotation.kSPRFlipVertical:
-                            replaceImage.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                            replaceImage.Mutate((x) => x.Flip(FlipMode.Vertical));
                             break;
                         case SpritePackingRotation.kSPRRotate180:
-                            replaceImage.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                            replaceImage.Mutate((x) => x.Rotate(RotateMode.Rotate180));
                             break;
                         case SpritePackingRotation.kSPRRotate90:
-                            replaceImage.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                            replaceImage.Mutate((x) => x.Rotate(RotateMode.Rotate90));
                             break;
                     }
                 }
@@ -88,7 +89,7 @@ static class BitmapUpdate
 
     public class SwapData
     {
-        public Bitmap replaceImage;
+        public Image<Bgra32> replaceImage;
         public Sprite sprite;
         public Rectf textureRect;
         public Rectangle textureRect2;
@@ -97,40 +98,31 @@ static class BitmapUpdate
         public SpriteSettings settingsRaw;
     }
 
-    public static Bitmap ClearRect(Bitmap atlas, Rectangle rect)
+    public static void ClearRect(Image<Bgra32> atlas, Rectangle rect)
     {
-        Rectangle fullRect = new Rectangle(0, 0, atlas.Width, atlas.Height);
-        Region region = new Region(fullRect);
-        GraphicsPath path = new GraphicsPath();
-        path.AddRectangle(rect);
-        region.Exclude(path);
-        Bitmap bm = new Bitmap(atlas);
-
-        using (Graphics gr = Graphics.FromImage(bm))
+        var graphicsOptions = new GraphicsOptions
         {
-            gr.Clear(System.Drawing.Color.Transparent);
-
-            // Fill the region.
-            gr.SetClip(region, CombineMode.Replace);
-            gr.SmoothingMode = SmoothingMode.AntiAlias;
-            using (TextureBrush brush = new TextureBrush(atlas, fullRect))
-            {
-                gr.FillRectangle(brush, fullRect);
-            }
-        }
-        return bm;
+            AlphaCompositionMode = PixelAlphaCompositionMode.Clear
+        };
+        var options = new DrawingOptions
+        {
+            GraphicsOptions = graphicsOptions
+        };
+        atlas.Mutate(x => x.Fill(options, SixLabors.ImageSharp.Color.Transparent, rect));
     }
 
-    public static Bitmap ProcessSwaps(Bitmap atlas, SwapData[] swaps)
+    public static void ReplaceRect(Image<Bgra32> atlas, Image<Bgra32> image, Rectangle rect)
+    {
+        var point = new Point(rect.Left, rect.Top);
+        atlas.Mutate(x => x.DrawImage(image, point, PixelColorBlendingMode.Add, 1.0f));
+    }
+
+    public static void ProcessSwaps(Image<Bgra32> atlas, SwapData[] swaps)
     {
         foreach (var swap in swaps)
         {
-            atlas = ClearRect(atlas, swap.textureRect2);
-            using (var graphic = Graphics.FromImage(atlas))
-            {
-                graphic.DrawImage(swap.replaceImage, swap.textureRect2, swap.destRect, GraphicsUnit.Pixel);
-            }
+            ClearRect(atlas, swap.textureRect2);
+            ReplaceRect(atlas, swap.replaceImage, swap.destRect);
         }
-        return atlas;
     }
 }

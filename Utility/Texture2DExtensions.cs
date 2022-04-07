@@ -29,18 +29,5 @@ namespace AssetStudio
                 BigArrayPool<byte>.Shared.Return(buff);
             }
         }
-
-        public static MemoryStream ConvertToStream(this Texture2D m_Texture2D, ImageFormat imageFormat, bool flip)
-        {
-            var image = ConvertToImage(m_Texture2D, flip);
-            if (image != null)
-            {
-                using (image)
-                {
-                    return image.ConvertToStream(imageFormat);
-                }
-            }
-            return null;
-        }
     }
 }
