@@ -359,8 +359,16 @@ namespace atlastool
                             output = args[i].Trim();
                             if (!Directory.Exists(output))
                             {
-                                Console.WriteLine($"Error: The specified output path does not exist.");
-                                return;
+                                try
+                                {
+                                    Directory.CreateDirectory(output);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine("Error: Could not create output directory.");
+                                    Console.WriteLine($"Exception info: {ex.Message}");
+                                    return;
+                                }
                             }
                             break;
                         }
