@@ -216,7 +216,7 @@ namespace atlastool
 
                                 var spriteData = new SpriteJsonData
                                 {
-                                    fileName = filePath,
+                                    fileName = filename,
                                     name = spr.m_Name,
                                     pathID = (int)spr.m_PathID,
                                     hash = hashString
