@@ -9,6 +9,7 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>Link</TrimMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Version>0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
