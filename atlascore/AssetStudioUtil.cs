@@ -84,6 +84,29 @@ public static class AssetStudioUtil
         return null;
     }
 
+    public static bool TryGetSpriteTexture(this Sprite spr, out Texture2D? texOut, out int fileID)
+    {
+        if (spr.m_SpriteAtlas != null && spr.m_SpriteAtlas.TryGet(out var m_SpriteAtlas))
+        {
+            if (m_SpriteAtlas.m_RenderDataMap.TryGetValue(spr.m_RenderDataKey, out var spriteAtlasData) && spriteAtlasData.texture.TryGet(out var texture2D))
+            {
+                texOut = texture2D;
+                fileID = spriteAtlasData.texture.m_FileID;
+                return true;
+            }
+        }
+        else if (spr.m_RD != null && spr.m_RD.texture.TryGet(out var texture2D))
+        {
+            texOut = texture2D;
+            fileID = spr.m_RD.texture.m_FileID;
+            return true;
+        }
+
+        texOut = null;
+        fileID = -1;
+        return false;
+    }
+
     public static bool TryGetSpriteTexture(this Sprite spr, out Texture2D? texOut)
     {
         if (spr.m_SpriteAtlas != null && spr.m_SpriteAtlas.TryGet(out var m_SpriteAtlas))

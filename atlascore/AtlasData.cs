@@ -13,19 +13,22 @@ namespace atlascore;
 public class TextureData
 {
     public string Name { get; set; }
+    public int FileID { get; set; }
     public int PathID { get; set; }
     public Image<Bgra32>? Texture;
 
     [JsonConstructor]
-    public TextureData(string name, int pathID)
+    public TextureData(string name, int fileID, int pathID)
     {
         Name = name;
+        FileID = fileID;
         PathID = pathID;
     }
 
-    public TextureData(string name, int pathID, Image<Bgra32> texture)
+    public TextureData(string name, int fileID, int pathID, Image<Bgra32> texture)
     {
         Name = name;
+        FileID = fileID;
         PathID = pathID;
         Texture = texture;
     }

@@ -13,7 +13,8 @@ public class AtlasOps
         foreach (var sprite in atlasData.Sprites)
         {
             var texture = atlasData.Textures[sprite.SourceTexturePathID];
-            sprite.Texture = ImageOps.CutImage(texture.Texture, sprite);
+            if (texture.Texture != null)
+                sprite.Texture = ImageOps.CutImage(texture.Texture, sprite);
         }
     }
 
@@ -104,13 +105,13 @@ public class AtlasOps
             AtlasData atlasData = new(gameVersion, assetPath, atlas.m_Name, (int)atlas.m_PathID);
             foreach (var sprite in atlas.EnumerateAtlasSprites())
             {
-                if (sprite.TryGetSpriteTexture(out var texture))
+                if (sprite.TryGetSpriteTexture(out var texture, out int fileID))
                 {
                     AssetStudio.Texture2D tex = texture!;
                     if (!atlasData.Textures.ContainsKey((int)tex.m_PathID))
                     {
                         var img = AssetStudio.Texture2DExtensions.ConvertToImage(tex, false);
-                        var textureData = new TextureData(tex.m_Name, (int)tex.m_PathID, img);
+                        var textureData = new TextureData(tex.m_Name, fileID, (int)tex.m_PathID, img);
                         atlasData.Textures[(int)tex.m_PathID] = textureData;
                     }
 
