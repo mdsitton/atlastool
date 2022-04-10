@@ -106,7 +106,7 @@ namespace atlastool
 
             if (extract && input != string.Empty)
             {
-                ExtractAtlas.StartExtract(input, output);
+                AtlasOps.ExtractToFolder(input, output);
             }
             else if (extract)
             {
@@ -115,7 +115,7 @@ namespace atlastool
 
             if (combine && input != string.Empty)
             {
-                // CombineAtlas(input);
+                AtlasOps.CombineFromPath(input);
             }
             else if (combine)
             {

@@ -21,12 +21,12 @@ public class RectData
     public float Width { get; set; }
     public float Height { get; set; }
 
-    public RectData(float x, float y, float w, float h)
+    public RectData(float x, float y, float width, float height)
     {
         X = x;
         Y = y;
-        Width = w;
-        Height = h;
+        Width = width;
+        Height = height;
     }
 }
 

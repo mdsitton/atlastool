@@ -14,7 +14,14 @@ public class TextureData
 {
     public string Name { get; set; }
     public int PathID { get; set; }
-    public Image<Bgra32> Texture;
+    public Image<Bgra32>? Texture;
+
+    [JsonConstructor]
+    public TextureData(string name, int pathID)
+    {
+        Name = name;
+        PathID = pathID;
+    }
 
     public TextureData(string name, int pathID, Image<Bgra32> texture)
     {
@@ -26,17 +33,28 @@ public class TextureData
 
 public class AtlasData
 {
-    public string GameVerion { get; set; }
+    public string GameVersion { get; set; }
     public string AssetPath { get; set; }
     public string Name { get; set; }
     public int PathID { get; set; }
 
     public Dictionary<int, TextureData> Textures { get; set; }
-    public IList<SpriteData> Sprites { get; set; }
+    public List<SpriteData> Sprites { get; set; }
+
+    [JsonConstructor]
+    public AtlasData(string gameVersion, string assetPath, string name, int pathID, Dictionary<int, TextureData> textures, List<SpriteData> sprites)
+    {
+        GameVersion = gameVersion;
+        AssetPath = assetPath;
+        Name = name;
+        PathID = pathID;
+        Textures = textures;
+        Sprites = sprites;
+    }
 
     public AtlasData(string gameVersion, string assetPath, string name, int pathID)
     {
-        GameVerion = gameVersion;
+        GameVersion = gameVersion;
         AssetPath = assetPath;
         Name = name;
         PathID = pathID;
