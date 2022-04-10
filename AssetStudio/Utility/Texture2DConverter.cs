@@ -4,7 +4,7 @@ using Texture2DDecoder;
 
 namespace AssetStudio
 {
-    public class Texture2DConverter
+    internal class Texture2DConverter
     {
         private ResourceReader reader;
         private int m_Width;

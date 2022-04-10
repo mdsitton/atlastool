@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="AssetStudio.PInvoke\Properties\**" />
+    <EmbeddedResource Remove="AssetStudio.PInvoke\Properties\**" />
+    <None Remove="AssetStudio.PInvoke\Properties\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FastEnum" Version="1.6.0" />
+    <PackageReference Include="System.Text.Json" Version="5.0.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.0" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AssetStudio\AssetStudio.csproj" />
+  </ItemGroup>
+
+</Project>

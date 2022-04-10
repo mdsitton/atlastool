@@ -28,7 +28,7 @@ namespace AssetStudio.PInvoke
         private static string GetDirectedDllDirectory()
         {
             var localPath = AppContext.BaseDirectory;
-            var localDir = Path.Combine(Path.GetDirectoryName(localPath), "deps");
+            var localDir = Path.GetDirectoryName(localPath);
 
             var subDir = Environment.Is64BitProcess ? "x64" : "x86";
 
