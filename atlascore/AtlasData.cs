@@ -16,6 +16,7 @@ public class TextureData
     public int FileID { get; set; }
     public int PathID { get; set; }
     public Image<Bgra32>? Texture;
+    public bool isChanged;
 
     [JsonConstructor]
     public TextureData(string name, int fileID, int pathID)
@@ -67,7 +68,6 @@ public class AtlasData
 
     public static void SerializeToFile(AtlasData atlasData, string fileName)
     {
-
         File.WriteAllBytes(fileName, JsonSerializer.SerializeToUtf8Bytes(atlasData, new JsonSerializerOptions { WriteIndented = true }));
     }
 

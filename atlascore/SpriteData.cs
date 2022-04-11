@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -37,8 +38,10 @@ public class SpriteData
     public Orientation Orientation { get; set; }
     public RectData Rect { get; set; }
     public int SourceTexturePathID { get; set; }
+    public string? InitialFileHash { get; set; }
 
     public Image<Bgra32>? Texture;
+    public bool isChanged;
 
     public SpriteData(int pathID, string name, Orientation orientation, RectData rect, int sourceTexturePathID)
     {
@@ -48,4 +51,16 @@ public class SpriteData
         Rect = rect;
         SourceTexturePathID = sourceTexturePathID;
     }
+
+    [JsonConstructor]
+    public SpriteData(int pathID, string name, Orientation orientation, RectData rect, int sourceTexturePathID, string initialFileHash)
+    {
+        PathID = pathID;
+        Name = name;
+        Orientation = orientation;
+        Rect = rect;
+        SourceTexturePathID = sourceTexturePathID;
+        InitialFileHash = initialFileHash;
+    }
+
 }

@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
@@ -22,8 +25,14 @@ public class AtlasOps
     {
         foreach (var sprite in atlasData.Sprites)
         {
+            if (!sprite.isChanged)
+                continue;
             var texture = atlasData.Textures[sprite.SourceTexturePathID];
-            ImageOps.ReplaceImage(texture.Texture, sprite);
+            if (texture.Texture != null)
+            {
+                ImageOps.ReplaceImage(texture.Texture, sprite);
+                texture.isChanged = true;
+            }
         }
     }
 
@@ -31,7 +40,13 @@ public class AtlasOps
     {
         foreach (var tex in atlasData.Textures.Values)
         {
-            var imgPath = Path.Combine(outputDir, $"{tex.Name}-{tex.PathID}.png");
+            string name = $"{tex.Name}-{tex.PathID}";
+            if (tex.isChanged)
+            {
+                name += "-changed";
+            }
+            name += ".png";
+            var imgPath = Path.Combine(outputDir, name);
             try
             {
                 var texOut = tex.Texture.Clone((x) => x.Flip(FlipMode.Vertical));
@@ -39,7 +54,7 @@ public class AtlasOps
             }
             catch
             {
-                Console.WriteLine($"error saving texture: {tex.Name}-{tex.PathID}.png");
+                Console.WriteLine($"error saving texture: ${name}");
                 continue;
             }
         }
@@ -75,11 +90,27 @@ public class AtlasOps
 
         LoadTextures(atlasData, folderPath);
 
-        foreach (var sprite in atlasData.Sprites)
+        byte[]?[] filesData = new byte[]?[atlasData.Sprites.Count];
+
+        for (int i = 0; i < atlasData.Sprites.Count; ++i)
         {
+            var sprite = atlasData.Sprites[i];
             var spriteName = Path.Combine(texfolderPath, $"{sprite.Name}-{sprite.PathID}.png");
-            sprite.Texture = Image.Load<Bgra32>(File.ReadAllBytes(spriteName));
+            filesData[i] = File.ReadAllBytes(spriteName);
         }
+
+        var hashes = HashSpriteFiles(filesData);
+
+        Parallel.For(0, filesData.Length, (i) =>
+        {
+            var sprite = atlasData.Sprites[i];
+            if (sprite.InitialFileHash != hashes[i])
+            {
+                sprite.isChanged = true;
+                Console.WriteLine($"Modified sprite found:  {sprite.Name}-{sprite.PathID}.png");
+            }
+            sprite.Texture = Image.Load<Bgra32>(filesData[i]);
+        });
 
         return atlasData;
     }
@@ -139,7 +170,47 @@ public class AtlasOps
             return;
 
         MergeSprites(atlasData);
-        SaveTextures(atlasData, inputFolder);
+
+        bool foundChanged = false;
+
+        foreach (var tex in atlasData.Textures.Values)
+        {
+            if (tex.isChanged)
+            {
+                foundChanged = true;
+            }
+        }
+
+        if (foundChanged)
+        {
+            SaveTextures(atlasData, inputFolder);
+        }
+        else
+        {
+            Console.WriteLine("No changed textures found!");
+        }
+    }
+
+    [ThreadStatic]
+    public static SHA1 hash = SHA1.Create();
+
+    public static string[] HashSpriteFiles(byte[]?[] filesData)
+    {
+        string[] newHashes = new string[filesData.Length];
+        Parallel.For(0, filesData.Length, (i) =>
+        {
+            if (hash == null)
+            {
+                hash = SHA1.Create();
+            }
+
+            var data = filesData[i];
+            if (data != null)
+            {
+                newHashes[i] = Convert.ToBase64String(hash.ComputeHash(data));
+            }
+        });
+        return newHashes;
     }
 
     public static void ExtractToFolder(string input, string output)
@@ -157,20 +228,51 @@ public class AtlasOps
         Directory.CreateDirectory(outputDir);
         Directory.CreateDirectory(Path.Combine(outputDir, atlasData.Name));
 
-        var jsonPath = Path.Combine(outputDir, $"{atlasData.Name}.json");
-        AtlasData.SerializeToFile(atlasData, jsonPath);
         SaveTextures(atlasData, outputDir);
-        foreach (var sprite in atlasData.Sprites)
+        byte[]?[] filesData = new byte[]?[atlasData.Sprites.Count];
+
+        Parallel.For(0, filesData.Length, (i) =>
         {
-            var imgPath = Path.Combine(outputDir, atlasData.Name, $"{sprite.Name}-{sprite.PathID}.png");
+            var sprite = atlasData.Sprites[i];
             try
             {
-                sprite.Texture!.SaveAsPng(imgPath);
+                using (var ms = new MemoryStream())
+                {
+                    sprite.Texture!.SaveAsPng(ms);
+                    filesData[i] = ms.GetBuffer();
+                }
             }
             catch
             {
+                filesData[i] = null;
                 Console.WriteLine($"error saving texture: {sprite.Name}-{sprite.PathID}.png");
-                continue;
+                return;
+            }
+        });
+
+        var fileHashes = HashSpriteFiles(filesData);
+
+        for (int i = 0; i < atlasData.Sprites.Count; ++i)
+        {
+            var sprite = atlasData.Sprites[i];
+            sprite.InitialFileHash = fileHashes[i];
+        }
+
+        var jsonPath = Path.Combine(outputDir, $"{atlasData.Name}.json");
+        AtlasData.SerializeToFile(atlasData, jsonPath);
+
+        for (int i = 0; i < atlasData.Sprites.Count; ++i)
+        {
+            var sprite = atlasData.Sprites[i];
+            var data = filesData[i];
+            if (data != null)
+            {
+                var imgPath = Path.Combine(outputDir, atlasData.Name, $"{sprite.Name}-{sprite.PathID}.png");
+                File.WriteAllBytes(imgPath, data);
+            }
+            else
+            {
+                Console.WriteLine($"error saving texture: {sprite.Name}-{sprite.PathID}.png");
             }
         }
     }
