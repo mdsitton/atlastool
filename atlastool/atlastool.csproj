@@ -7,7 +7,7 @@
     <PublishSingleFile>true</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <TrimMode>Link</TrimMode>
-    <Version>0.3</Version>
+    <Version>0.4</Version>
   </PropertyGroup>
 
   <ItemGroup>
