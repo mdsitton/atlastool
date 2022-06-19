@@ -159,13 +159,13 @@ public static class AssetStudioUtil
                 //RotateAndFlip
                 switch (settingsRaw.packingRotation)
                 {
-                    case SpritePackingRotation.kSPRFlipHorizontal:
+                    case SpritePackingRotation.FlipHorizontal:
                         return Orientation.FlipHorizontal;
-                    case SpritePackingRotation.kSPRFlipVertical:
+                    case SpritePackingRotation.FlipVertical:
                         return Orientation.FlipVertical;
-                    case SpritePackingRotation.kSPRRotate180:
+                    case SpritePackingRotation.Rotate180:
                         return Orientation.Rotate180;
-                    case SpritePackingRotation.kSPRRotate90:
+                    case SpritePackingRotation.Rotate90:
                         return Orientation.Rotate90;
                 }
             }

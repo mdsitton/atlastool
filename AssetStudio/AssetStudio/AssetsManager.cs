@@ -18,6 +18,7 @@ namespace AssetStudio
 
         private List<string> importFiles = new List<string>();
         private HashSet<string> importFilesHash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private HashSet<string> noexistFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private HashSet<string> assetsFileListHash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public void LoadFiles(params string[] files)
@@ -54,6 +55,7 @@ namespace AssetStudio
 
             importFiles.Clear();
             importFilesHash.Clear();
+            noexistFiles.Clear();
             assetsFileListHash.Clear();
 
             ReadAssets();
@@ -110,19 +112,25 @@ namespace AssetStudio
                         if (!importFilesHash.Contains(sharedFileName))
                         {
                             var sharedFilePath = Path.Combine(Path.GetDirectoryName(reader.FullPath), sharedFileName);
-                            if (!File.Exists(sharedFilePath))
+                            if (!noexistFiles.Contains(sharedFilePath))
                             {
-                                var findFiles = Directory.GetFiles(Path.GetDirectoryName(reader.FullPath), sharedFileName, SearchOption.AllDirectories);
-                                if (findFiles.Length > 0)
+                                if (!File.Exists(sharedFilePath))
                                 {
-                                    sharedFilePath = findFiles[0];
+                                    var findFiles = Directory.GetFiles(Path.GetDirectoryName(reader.FullPath), sharedFileName, SearchOption.AllDirectories);
+                                    if (findFiles.Length > 0)
+                                    {
+                                        sharedFilePath = findFiles[0];
+                                    }
                                 }
-                            }
-
-                            if (File.Exists(sharedFilePath))
-                            {
-                                importFiles.Add(sharedFilePath);
-                                importFilesHash.Add(sharedFileName);
+                                if (File.Exists(sharedFilePath))
+                                {
+                                    importFiles.Add(sharedFilePath);
+                                    importFilesHash.Add(sharedFileName);
+                                }
+                                else
+                                {
+                                    noexistFiles.Add(sharedFilePath);
+                                }
                             }
                         }
                     }
@@ -148,7 +156,7 @@ namespace AssetStudio
                 {
                     var assetsFile = new SerializedFile(reader, this);
                     assetsFile.originalPath = originalPath;
-                    if (!string.IsNullOrEmpty(unityVersion) && assetsFile.header.m_Version < SerializedFileFormatVersion.kUnknown_7)
+                    if (!string.IsNullOrEmpty(unityVersion) && assetsFile.header.m_Version < SerializedFileFormatVersion.Unknown_7)
                     {
                         assetsFile.SetVersion(unityVersion);
                     }
