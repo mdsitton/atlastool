@@ -117,21 +117,23 @@ public class AtlasOps
 
     public static AtlasData? ReadAtlasDataFromAssets(string assetPath)
     {
+        Console.Write("Loading assets");
         AssetStudio.AssetsManager assetManager = AssetStudioUtil.LoadAssetManager(assetPath);
         if (assetManager == null)
         {
             Console.WriteLine("Error: Could not load game data. Please ensure the input path is for the game's data folder or data.unity3d.");
             return null;
         }
-
+        Console.WriteLine("\nReading game version");
         var gameVersion = AssetStudioUtil.GetGameVersion(assetManager.assetsFileList);
 
-
+        Console.WriteLine("Enumerating assets");
         foreach (var atlas in assetManager.assetsFileList.EnumerateAssets<AssetStudio.SpriteAtlas>())
         {
             // Limit to just the fiveFretAtlas for now
             if (atlas.m_Name != "fiveFretAtlas")
                 continue;
+            Console.WriteLine("Loading sprite data");
 
             AtlasData atlasData = new(gameVersion, assetPath, atlas.m_Name, (int)atlas.m_PathID);
             foreach (var sprite in atlas.EnumerateAtlasSprites())
@@ -222,12 +224,14 @@ public class AtlasOps
         if (atlasData == null)
             return;
 
+        Console.WriteLine($"Slicing sprites");
         SliceSprites(atlasData);
 
         var outputDir = Path.Combine(output, atlasData.GameVersion);
         Directory.CreateDirectory(outputDir);
         Directory.CreateDirectory(Path.Combine(outputDir, atlasData.Name));
 
+        Console.WriteLine($"Saving sprites to: {outputDir}");
         SaveTextures(atlasData, outputDir);
         byte[]?[] filesData = new byte[]?[atlasData.Sprites.Count];
 
@@ -274,7 +278,10 @@ public class AtlasOps
             {
                 Console.WriteLine($"error saving texture: {sprite.Name}-{sprite.PathID}.png");
             }
+
         }
+
+        Console.WriteLine($"Done");
     }
 
 }

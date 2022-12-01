@@ -12,6 +12,7 @@ public static class AssetStudioUtil
 {
     public static AssetsManager LoadAssetManager(string path)
     {
+        AssetStudio.Progress.Default = new Progress<int>((int val) => Console.Write($"\rLoading assets: {val,3}%"));
         AssetsManager assetManager = new();
 
         if (File.Exists(path))
