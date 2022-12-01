@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "atlascore", "atlascore\atla
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssetStudio", "AssetStudio\AssetStudio.csproj", "{B98EDD8E-883D-4A81-AF9C-BDF8EDC90930}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "atlastool", ".\atlastool\atlastool.csproj", "{04955BAD-2A4F-4D16-8E17-26D85265587A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "atlastool", "atlastool\atlastool.csproj", "{04955BAD-2A4F-4D16-8E17-26D85265587A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
